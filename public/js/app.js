@@ -32,8 +32,8 @@ weatherform.addEventListener('submit',(event) => {
             messageOne.textContent = data.error
         }
         else{
-            messageOne.textContent = data.address
-            messageTwo.textContent = data.summary+' '+data.temperature+' '+data.precipProbability
+            messageOne.textContent = 'location : '+data.address
+            messageTwo.textContent = data.summary+'Temperature is '+data.temperature+'°C and there are '+data.precipProbability+'% chances of raining'
         }
     })
 })    
