@@ -33,7 +33,7 @@ weatherform.addEventListener('submit',(event) => {
         }
         else{
             messageOne.textContent = 'location : '+data.address
-            messageTwo.textContent = data.summary+'Temperature is '+data.temperature+'°C and there are '+data.precipProbability+'% chances of raining'
+            messageTwo.textContent = data.summary+'Temperature is '+data.temperature+'°C and there are '+data.precipProbability+'% chances of raining. '+'Todays highest temperature is '+data.temperatureHigh+'°C and lowest temperature is '+data.temperatureLow+'°C'
         }
     })
 })    
