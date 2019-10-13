@@ -117,7 +117,7 @@ const recursion = ((i) => {
           resarray.sort(sortFunction)
           console.log(resarray)
 //           res.send('OK')
-           return resolve(i)
+           return resolve()
        }
        setTimeout(() => {
            geocode(Floodreport[i]).then(({latitude, longitude, location}={}) => 
@@ -142,7 +142,7 @@ const recursion = ((i) => {
            }).catch((error) => {
                 console.log(error)
            })                  
-       },500)
+       },900)
      })
  })
 
@@ -176,7 +176,7 @@ function sortFunction(a, b) {
 
      scrape(req.query.address).then(() => {
           len = Floodreport.length
-          console.log(recursion(0));
+          //console.log(recursion(0));
           recursion(0).then(() => {
                console.log('hiiiii')
                resarray.sort(sortFunction)
