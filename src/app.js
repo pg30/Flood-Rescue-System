@@ -1,110 +1,242 @@
+var fs = require('fs'); 
+//var parse = require('csv-parser');
 const path = require('path')
 const express = require('express')
 const hbs = require('hbs')
-const geoCode = require('../utils/geocode')
-const forecast = require('../utils/forecast')
+const geocode = require('./utils/geocode')
+const forecast = require('./utils/forecast')
+const depth= require('./utils/depth')
+const scrape = require('./utils/scrape')
+const request = require('request');
+const cheerio = require('cheerio');
+//var fs=require("fs")
+
+
 const app = express()
 const port = process.env.PORT || 3000
-//define paths for express config
+
+// Read flood.csv and store the addresses in a array
+
+var dict={}
+var maindict={}
+for(i=0;i<10;i++)
+{
+     dict[i]=[]
+}
+// Define paths for express config
 const publicDirectoryPath = path.join(__dirname,'../public')
-const viewPath = path.join(__dirname,'../templates/views')
-const partialsPath = path.join(__dirname,'../templates/partials')
+const viewPath = path.join(__dirname, '../templates/views')
+const partialPath = path.join(__dirname,'../templates/partials')
 
+// Setup handlebars engine and views location
+app.set('view engine', 'hbs')
+app.set('views',viewPath) 
+hbs.registerPartials(partialPath)
 
-//setup handlebars engine and views location
-app.set('views',viewPath)
-app.set('view engine','hbs')//to let express know about the templating engine we are using using the hbs package
-hbs.registerPartials(partialsPath)
-
-//setup static directory to serve
+//Setup static directory to serve 
 app.use(express.static(publicDirectoryPath))
-// app.get('', (req,res) => {
-//     res.send('<h1> Weather </h1>')
-// }) //get method describes the value which needs to be return when someone accesses the website
- app.get('',(req,res) => {
-     res.render('index',{
-         title: 'weather app',
-         name: 'pranay garg'
 
-     }) //render allows to render one of our views
- })
+app.get('', (req,res) => {
+     res.render('index', {
+          title: 'Weather',
+          name: 'Yash Sharma'
+     }) 
+})
 
- app.get('/about',(req,res) => {
-     res.render('about',{
-         title: 'about me',
-         name: 'pranay garg'
+app.get('/about', (req, res) => {
+     res.render('about', {
+          title: 'About me',
+          name: 'Yash Sharma'
+     }) 
+})
+
+app.get('/help', (req, res) => {
+     res.render('help',{
+          helpText: 'Anything for help!', 
+          title: 'Help',
+          name: 'Yash Sharma'
+     })
+})
+var len=0
+app.get('/weather',(req, res) => {
+     
+     if(!req.query.address) {
+          return res.send({
+               error: 'You must provide an address!'
+          })
+     }
+     //pranay code go here he will get req.queryaddress and then will generate a csv file
+        var Floodreport = []
+        var resarray = []
+
+
+        
+//code for scraping starts
+const scrape = (city) => {
+     return new Promise( (resolve,reject) => {
+         //const city = 'indore';
+         city = city.toLowerCase()
+         const url = 'https://www.mapsofindia.com/'+city+'/localities/';
+         console.log(url)
+         request(url,(error,response,html) => {
+             if(!error && response.statusCode==200)
+             {
+                 const $ = cheerio.load(html);
+                     $('.intrl_links a').each((i,el) => {
+                             const item = $(el).text();
+                             Floodreport.push(item)
+                     });
+                 if(Floodreport.length==0)
+                 {
+                     console.log('empty array');
+                     reject('no regions found')
+                 }
+                 else
+                 {
+                     console.log(Floodreport)
+                     resolve()
+                 }
+             }
+         });
+     })
+ }
+
+//code for scraping ends
+
+
+
+//code for recursion starts
+
+const recursion = ((i) => {
+     return new Promise((resolve,reject) => {
+       console.log(i);
+       if(i==len)
+       {
+           //console.log(dict)
+          //  console.log(resarray)
+          resarray.sort(sortFunction)
+          console.log(resarray)
+//           res.send('OK')
+           return resolve(i)
+       }
+       setTimeout(() => {
+           geocode(Floodreport[i]).then(({latitude, longitude, location}={}) => 
+           {
+               console.log(i)
+            console.log('geocode function')
+               //dict[i].push({latitude,longitude})
+               console.log({latitude,longitude})
+                depth(latitude, longitude).then((DepthData) => {
+                     if(!DepthData){
+                          console.log("lol")  
+                     }
+                     //console.log(DepthData)
+                     console.log('depth function')
+                 //    dict[i].push(DepthData)
+                     resarray.push([DepthData,Floodreport[i]])
+                     console.log(DepthData)
+                    recursion(++i)
+                }).catch((error) => {
+                    console.log(error);
+                })
+           }).catch((error) => {
+                console.log(error)
+           })                  
+       },500)
      })
  })
- app.get('/help',(req,res) => {
-    res.render('help',{
-        helptext: "this is a help page",
-        title: 'help page',
-        name: 'pranay garg'
-    })
-})
-app.get('/weather',(req,res) => {
-    if(!req.query.address){
-        return res.send({
-            error: 'address needs to be provided'
-        })
-    }
-    geoCode(req.query.address,(error,{latitude,longitude,location} = {} ) => {
-        if(error){
-            return res.send({
-                error: error
-            })
-        }
-        forecast(latitude, longitude, (error, {summary,temperature,precipProbability,temperatureHigh,temperatureLow} = {} ) => {
-            if(error)
-                return res.send({
-                    error: error
-                })
-            res.send({
-                address: req.query.address,
-                summary: summary,
-                temperature: temperature,
-                precipProbability: precipProbability,
-                temperatureHigh,
-                temperatureLow
 
-            })
+//code for recursion ends
+
+//code for sorting starts
+
+
+// a.sort(sortFunction);
+// console.log(a)
+function sortFunction(a, b) {
+    if (a[0] === b[0]) {
+        return 0;
+    }
+    else {
+        return (a[0] > b[0]) ? -1 : 1;
+    }
+}
+
+//code for sorting ends
+
+
+
+
+
+
+
+
+
+
+
+     scrape(req.query.address).then(() => {
+          len = Floodreport.length
+          console.log(recursion(0));
+          recursion(0).then(() => {
+               console.log('hiiiii')
+               resarray.sort(sortFunction)
+               console.log(resarray)
+          }).catch((error) => {
+
+               console.log((error))
           })
-    })
-    // res.send({
-    //     address: req.query.address
-    // })
-})  
+     }).catch((error) => {
+          console.log(error)
+     })
+     
 
-app.get('/products',(req,res) => {
-    if(!req.query.search){
-        return res.send({
-            error: 'you must provide a search term'
-        })
-    }
-    //console.log(req.query) //the query made in the browser is available through req.query.key 
-    res.send({
-        products: []
-    })
+
+
+
+//function to render data n html page
+          res.send({
+               
+               //console.log(dict)
+               // forecast: Floodreport,
+               // location,
+               // address: 'Indore'
+          })
+
+ //end of app.get()         
+     })
+
+//console.log(lol1)
+//console.log(lol2)
+
+app.get('*/products', (req,res) => {
+     if(!req.query.search) {
+          return res.send({
+               error: 'You must provide a search term'
+          })
+     }  
+
+     console.log(req.query.search)
+     res.send({
+          products: []
+     })
 })
 
-app.get('/help/*',(req,res) => {
-    res.render('404',{
-        title: '404',
-        name: 'Pranay garg',
-        errormessage: 'help page not found'
-    })
-})
-app.get('*',(req,res) => {//* is the wild card character
-    res.render('404',{
-        title: '404',
-        name: 'pranay garg',
-        errormessage: 'page not found'
-    })
+app.get('/help/*', (req, res) => {
+     res.render('404', {
+          title: '404',
+          name: 'Brogrammer',
+          errorMessage: 'Help article not found'
+     })
 })
 
-//app.com
-//app.com/help
+app.get('*', (req, res) => {
+     res.render('404', {
+          title: '404',
+          name: 'Brogrammer', 
+          errorMessage: 'Page not found'
+     })
+})
 
-app.listen(port,() => {
+app.listen(port, () => {
     console.log('Server is up on port '+port)
-}) //to start the server
+})

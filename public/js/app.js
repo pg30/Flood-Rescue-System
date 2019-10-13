@@ -17,9 +17,13 @@
 
 const weatherform =  document.querySelector('form')
 const search = document.querySelector('input')
+const buttonget = document.getElementById('2')
 const messageOne = document.querySelector('#message-1')
 const messageTwo = document.querySelector('#message-2')
 //messageOne.textContent = 'From javascript'
+buttonget.addEventListener('click',(e) => {
+    console.log('HIIIIIII')
+})
 weatherform.addEventListener('submit',(event) => {
     event.preventDefault()
     const location = search.value
@@ -32,8 +36,7 @@ weatherform.addEventListener('submit',(event) => {
             messageOne.textContent = data.error
         }
         else{
-            messageOne.textContent = 'location : '+data.address
-            messageTwo.textContent = data.summary+'Temperature is '+data.temperature+'°C and there are '+data.precipProbability+'% chances of raining. '+'Todays highest temperature is '+data.temperatureHigh+'°C and lowest temperature is '+data.temperatureLow+'°C'
+            messageTwo.textContent = data
         }
     })
 })    
